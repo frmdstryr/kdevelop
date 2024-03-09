@@ -107,6 +107,7 @@ private:
 
 private:
     MesonBuilder* m_builder;
+    QHash<KDevelop::IProject*, QString> m_projectMesonInfoHashes;
     QHash<KDevelop::IProject*, MesonTargetsPtr> m_projectTargets;
     QHash<KDevelop::IProject*, MesonTestSuitesPtr> m_projectTestSuites;
     QHash<KDevelop::IProject*, KDirWatchPtr> m_projectWatchers;

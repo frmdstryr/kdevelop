@@ -32,6 +32,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStandardPaths>
+#include <QCryptographicHash>
 
 #include <algorithm>
 
@@ -214,6 +215,17 @@ QList<ProjectTargetItem*> MesonManager::targets(ProjectFolderItem* item) const
     return res;
 }
 
+static QString computeSha256Hash(QString path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QStringLiteral("");
+    }
+    QCryptographicHash hash(QCryptographicHash::Algorithm::Sha256);
+    hash.addData(&file);
+    return QString::fromUtf8(hash.result().toHex());
+}
+
 void MesonManager::onMesonInfoChanged(QString path, QString projectName)
 {
     qCDebug(KDEV_Meson) << "File" << path << "changed --> reparsing project";
@@ -221,6 +233,15 @@ void MesonManager::onMesonInfoChanged(QString path, QString projectName)
     if (!foundProject) {
         return;
     }
+
+    // KDirWatch::dirty triggers on file attr changes, only reparse if contents changed
+    QString newHash = computeSha256Hash(path);
+    auto it = m_projectMesonInfoHashes.constFind(foundProject);
+    if (it != m_projectMesonInfoHashes.constEnd() && *it == newHash) {
+        qCDebug(KDEV_Meson) << "File" << path << "hash unchanged";
+        return;
+    }
+    m_projectMesonInfoHashes[foundProject] = newHash;
 
     KJob* job = createImportJob(foundProject->projectItem());
     foundProject->setReloadJob(job);
